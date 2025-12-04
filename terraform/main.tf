@@ -24,17 +24,16 @@ provider "proxmox" {
 # --- Oprettelse af Simpel Test VM ---
 resource "proxmox_vm_qemu" "test_node" {
   target_node = "pve2"
-  name        = "b-test-node-30099"
-  vmid        = var.test_vmid # Læser 30099
+  name        = "b-test-node-30199" # KORRIGERET til 30199
+  vmid        = 30199             # KORRIGERET til 30199
   
-  # HENTES FRA VARIABEL: Sikrer, at skabelonnavnet (ubuntu-2204-cloud-base) IKKE er hardcodet
+  # HENTES FRA VARIABEL
   clone       = var.proxmox_template_name 
   
   agent       = 1
   start_at_node_boot = true 
   
-  # CPU & MEMORY
-    cpu {
+  cpu {
     cores = 1
     type  = "x86-64-v2-AES"
   }
@@ -46,16 +45,15 @@ resource "proxmox_vm_qemu" "test_node" {
     type    = "disk"
     slot    = "scsi0"
     storage = "vm-storage"
-    size    = "10G"
+    # size argument fjernet for at bruge skabelonens standardstørrelse (32G)
   }
 
-  # --- CLOUD-INIT DREV (NY SYNTAKS FOR V3.0) ---
-  # Jeg definerer Cloud-init som en diskressource, da den er en virtuel CD-ROM
+  # --- CLOUD-INIT DREV ---
   disk {
-    type    = "cloudinit" # Tvinger medietypen til at være Cloud-init
-    slot    = "ide2"      # Standard slot for Cloud-init CD-ROM
+    type    = "cloudinit" 
+    slot    = "ide2"      
     storage = "vm-storage"
-    size    = "4M"        # Standardstørrelse for Cloud-init drev
+    size    = "4M" # Beholdes, da det er størrelsen på CI-drevet, ikke OS-disken
   }
 
 
@@ -70,4 +68,3 @@ resource "proxmox_vm_qemu" "test_node" {
   ipconfig0 = "ip=192.168.8.${var.test_ip}/24,gw=192.168.8.1"
   sshkeys   = file("~/.ssh/id_bachelor_project.pub")
   ciuser    = "gitops" 
-}
