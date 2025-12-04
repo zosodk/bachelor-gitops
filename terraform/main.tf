@@ -45,6 +45,7 @@ resource "proxmox_vm_qemu" "test_node" {
     type    = "disk"
     slot    = "scsi0"
     storage = "vm-storage"
+    size    = "32"
     # size argument fjernet for at bruge skabelonens standardstørrelse (32G)
   }
 
@@ -68,3 +69,4 @@ resource "proxmox_vm_qemu" "test_node" {
   ipconfig0 = "ip=192.168.8.${var.test_ip}/24,gw=192.168.8.1"
   sshkeys   = file("~/.ssh/id_bachelor_project.pub")
   ciuser    = "gitops" 
+}
