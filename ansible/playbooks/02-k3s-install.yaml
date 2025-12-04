@@ -1,88 +1,111 @@
 # /ansible/playbooks/02-k3s-install.yaml
 ---
-- name: 2. K3s Installation og Cluster Konfiguration
+# ==============================================================================
+# PLAY 1: K3s Installation (Starter K3s på noderne)
+# Kører mod alle K8s Masters og Workers (hosts: all)
+# ==============================================================================
+- name: 1. Installer K3s Masters og Workers
   hosts: all
   become: yes
   gather_facts: no
   vars:
-    k3s_version: "v1.29.3+k3s1" # Stabil K3s version
-    # K3s skal bruge det interne 10.x netværk (internal_ip fra inventory)
+    k3s_version: "v1.29.3+k3s1" 
+    # Tvinger Masters til at bruge det interne 10.x netværk til replikering (HA)
     k3s_master_args: "--cluster-init --bind-address {{ internal_ip }} --advertise-address {{ internal_ip }} --disable traefik --disable servicelb --tls-san 192.168.8.101 --tls-san 192.168.8.102"
     k3s_worker_args: "--node-ip {{ internal_ip }}"
 
   tasks:
-    # --------------------------- K3s Master 1 (Cluster Init) ------------------------
-    - name: 2.1 Installer K3s på Master 1 (Cluster Init)
+    - name: 1.1 Installer K3s på Master 1 (Cluster Init)
       ansible.builtin.shell: |
         curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="{{ k3s_master_args }}" INSTALL_K3S_VERSION="{{ k3s_version }}" sh -
       when: inventory_hostname == 'b-k8s-master-1'
       
-    - name: 2.2 Hent K3s Node Token fra Master 1
+    - name: 1.2 Hent K3s Node Token fra Master 1
       ansible.builtin.shell: cat /var/lib/rancher/k3s/server/node-token
       register: k3s_token_result
-      delegate_to: b-k8s-master-1 # Udføres KUN på Master 1
+      delegate_to: b-k8s-master-1 
       run_once: true
 
-    - name: Gem Token (Fact)
+    - name: 1.3 Gem Token (Fact)
       ansible.builtin.set_fact:
         k3s_node_token: "{{ k3s_token_result.stdout }}"
       run_once: true
 
-    # --------------------------- K3s Master 2 (Join) ------------------------
-    - name: 2.3 Installer K3s på Master 2 (Join til Clusteret)
+    - name: 1.4 Installer K3s på Master 2 (Join til Clusteret)
       ansible.builtin.shell: |
         curl -sfL https://get.k3s.io | K3S_URL=https://10.0.0.101:6443 K3S_TOKEN="{{ k3s_node_token }}" INSTALL_K3S_EXEC="{{ k3s_master_args }}" INSTALL_K3S_VERSION="{{ k3s_version }}" sh -
       when: inventory_hostname == 'b-k8s-master-2' and k3s_node_token is defined
 
-    # --------------------------- K3s Workers (Join) ------------------------
-    - name: 2.4 Installer K3s på Workers (Join til Clusteret)
+    - name: 1.5 Installer K3s på Workers (Join til Clusteret)
       ansible.builtin.shell: |
         curl -sfL https://get.k3s.io | K3S_URL=https://10.0.0.101:6443 K3S_TOKEN="{{ k3s_node_token }}" INSTALL_K3S_EXEC="{{ k3s_worker_args }}" INSTALL_K3S_VERSION="{{ k3s_version }}" sh -
       when: inventory_hostname is in groups['k3s_workers'] and k3s_node_token is defined
-      
-- name: 3. Cluster Hardening og Labeling
-  hosts: all
-  become: yes
-  gather_facts: no
-  
-  tasks:
-    - name: 3.1 Vent på at K8s API er klar
-      ansible.builtin.wait_for_connection:
-        timeout: 300
-    # NYT TRIN: Vent indtil alle Masters er registreret i clusteret
-    - name: 3.1.1 Vent på at K8s Mastere er Ready
-      ansible.builtin.shell: |
-        kubectl get nodes | grep master | grep -v 'NotReady' | wc -l
-      register: masters_ready
-      until: masters_ready.stdout.strip() | int == 2
-      retries: 40 # Prøv 20 gange
-      delay: 10    # Vent 5 sekunder mellem forsøgene
-      delegate_to: b-k8s-master-1
-      run_once: true
 
-    - name: 3.2 Anvend Topology Label (Fysisk Host)
-      # Dette er afgørende for PostgreSQL HA (Anti-Affinity)
-      ansible.builtin.command: >
-        kubectl label node {{ inventory_hostname }} topology.kubernetes.io/zone={{ pve_host }} --overwrite
-      vars:
-        # Hent pve_host variablen fra inventory.yaml
-        pve_host: "{{ hostvars[inventory_hostname]['pve_host'] }}"
-      delegate_to: b-k8s-master-1 # Skal køre fra Admin Node via Master 1
-      run_once: true
+    # --- Kubeconfig Kopiering ---
+    - name: 1.6 Kopier Kubeconfig til Admin Node (30100)
+      ansible.builtin.fetch:
+        src: /etc/rancher/k3s/k3s.yaml
+        dest: /home/gitops/.kube/config-k3s
+        flat: yes
+        fail_on_missing: yes
+      when: inventory_hostname == 'b-k8s-master-1'
       
-    - name: 3.3 Taint Master Noder (Kun til Kontrol Plan)
-      # Masters bør KUN køre kontrolplans services (fx ArgoCD, Rook) og IKKE applikationer.
-      ansible.builtin.command: >
-        kubectl taint node {{ item }} node-role.kubernetes.io/control-plane=true:NoSchedule --overwrite
+# ==============================================================================
+# PLAY 2: Cluster Hardening og Labeling (Kører fra Admin Node: localhost)
+# Denne Play løser alle permissions- og kubectl-problemer ved at køre lokalt.
+# ==============================================================================
+- name: 2. Cluster Hardening og Labeling (Kørt fra Admin Node)
+  hosts: localhost 
+  become: no
+  gather_facts: no
+  vars:
+    # Stien til den Kubeconfig, der netop blev kopieret til 30100
+    kubeconfig_path: "/home/gitops/.kube/config-k3s"
+    
+  tasks:
+    - name: 2.1 Vent på at K8s API er klar (Localhost check)
+      ansible.builtin.wait_for:
+        host: 192.168.8.101 
+        port: 6443
+        timeout: 300
+      delegate_to: localhost
+
+    - name: 2.2 Vent på at alle 4 Noder er Ready
+      # Løser 'NotFound' fejl ved at vente på at Master 2 er fuldt synkroniseret.
+      ansible.builtin.shell: |
+        kubectl --kubeconfig {{ kubeconfig_path }} get nodes | grep -v 'NotReady' | grep -v 'NAME' | wc -l
+      register: nodes_ready
+      until: nodes_ready.stdout.strip() | int == 4 
+      retries: 40 
+      delay: 10
+      delegate_to: localhost
+
+    - name: 2.3 Anvend Topology Label (Fysisk Host)
+      # Påsætter labels (pve3/pve2) for PostgreSQL Anti-Affinity.
+      ansible.builtin.shell: |
+        kubectl --kubeconfig {{ kubeconfig_path }} label node {{ item.0 }} topology.kubernetes.io/zone={{ item.1 }} --overwrite
+      loop:
+        - [ "b-k8s-master-1", "{{ hostvars['b-k8s-master-1']['pve_host'] }}" ]
+        - [ "b-k8s-master-2", "{{ hostvars['b-k8s-master-2']['pve_host'] }}" ]
+        - [ "b-k8s-worker-1", "{{ hostvars['b-k8s-worker-1']['pve_host'] }}" ]
+        - [ "b-k8s-worker-2", "{{ hostvars['b-k8s-worker-2']['pve_host'] }}" ]
+      delegate_to: localhost
+
+    - name: 2.4 Taint Master Noder (Kun til Kontrol Plan)
+      # Forhindrer applikationer i at køre på Masters.
+      ansible.builtin.shell: |
+        kubectl --kubeconfig {{ kubeconfig_path }} taint node {{ item }} node-role.kubernetes.io/control-plane=true:NoSchedule --overwrite
       loop:
         - b-k8s-master-1
         - b-k8s-master-2
-      delegate_to: b-k8s-master-1
-      run_once: true
+      delegate_to: localhost
 
-    - name: 3.4 Kopier Kubeconfig til Admin Node (30100)
-      ansible.builtin.fetch:
-        src: /etc/rancher/k3s/k3s.yaml
-        dest: /home/{{ ansible_user }}/.kube/config
-        flat: yes
-      when: inventory_hostname == 'b-k8s-master-1'
+    - name: 2.5 Kopier Kubeconfig til standard sti for kubectl
+      # Flytter kubeconfig'en til ~/.kube/config for nem adgang.
+      ansible.builtin.copy:
+        src: "{{ kubeconfig_path }}"
+        dest: "{{ ansible_env.HOME }}/.kube/config"
+        remote_src: yes
+        mode: '0600'
+        owner: gitops
+      delegate_to: localhost
