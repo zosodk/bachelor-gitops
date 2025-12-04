@@ -21,50 +21,61 @@ provider "proxmox" {
   pm_minimum_permission_check = false 
 }
 
-# --- Oprettelse af Simpel Test VM ---
-resource "proxmox_vm_qemu" "test_node" {
-  target_node = "pve2"
-  name        = "b-test-node-30199" 
-  vmid        = 30199         
+# --- Oprettelse af K8s VM'er (Masters & Workers) ---
+resource "proxmox_vm_qemu" "k8s_node" {
+  # Bruger 'for_each' til at iterere gennem de 4 noder defineret i variables.tf
+  for_each    = var.k8s_nodes
+
+  target_node = each.value.pve_host
+  name        = each.key        
+  vmid        = each.value.id   
   
-  # HENTES FRA VARIABEL
+  # Kloning
   clone       = var.proxmox_template_name 
-  
   agent       = 1
   start_at_node_boot = true 
   
+  # Ressourcer 
   cpu {
-    cores = 1
+    cores = each.value.cores
     type  = "x86-64-v2-AES"
   }
+  memory      = each.value.memory
 
-  memory      = 1024
-
-  # --- DISK DEFINITION (OS Disk) ---
+  # 1. DISK DEFINITION (OS Disk) - BRUGER DEN FUNGERENDE SYNTAKS
   disk {
     type    = "disk"
     slot    = "scsi0"
-    storage = "vm-storage"
-    size    = "32"
+    storage = each.value.storage_name 
+    size    = "32G" 
   }
 
-  # --- CLOUD-INIT DREV ---
+  # 2. CLOUD-INIT DREV - BRUGER DEN FUNGERENDE SYNTAKS
   disk {
     type    = "cloudinit" 
     slot    = "ide2"      
-    storage = "vm-storage"
+    storage = each.value.storage_name 
+    size    = "4M"
   }
 
-
-  # NETVÆRK
+  # NETVÆRK 1 (net0): Offentligt/Management (192.168.8.x)
   network {
     bridge  = "vmbr0" 
     model   = "virtio"
     id      = 0
   }
   
+  # NETVÆRK 2 (net1): Privat/Cluster Replikering (10.0.0.x)
+  network {
+    bridge  = "vmbr1" 
+    model   = "virtio"
+    id      = 1
+  }
+  
   # Cloud-Init Metadata
-  ipconfig0 = "ip=192.168.8.${var.test_ip}/24,gw=192.168.8.1"
+  ipconfig0 = "ip=192.168.8.${each.value.ip}/24,gw=192.168.8.1" 
+  ipconfig1 = "ip=10.0.0.${each.value.ip}/24"
+  
   sshkeys   = file("~/.ssh/id_bachelor_project.pub")
   ciuser    = "gitops" 
 }
