@@ -45,7 +45,7 @@ resource "proxmox_vm_qemu" "test_node" {
     # 'slot' skal være den fulde streng (controller + id)
     slot    = "scsi0"
     
-    storage = "VM-Storage"
+    storage = "vm-storage"
     size    = "10G"
   }
 
