@@ -33,23 +33,31 @@ resource "proxmox_vm_qemu" "test_node" {
   agent       = 1
   start_at_node_boot = true 
   
-  # CI_STORAGE: Fortæller Proxmox, hvor Cloud-init CD-ROM-drevet skal placeres.
-  ci_storage = "vm-storage" 
-  
-  cpu {
+  # CPU & MEMORY
+    cpu {
     cores = 1
     type  = "x86-64-v2-AES"
   }
 
   memory      = 1024
 
-  # DISK DEFINITION
+  # --- DISK DEFINITION (OS Disk) ---
   disk {
     type    = "disk"
     slot    = "scsi0"
     storage = "vm-storage"
     size    = "10G"
   }
+
+  # --- CLOUD-INIT DREV (NY SYNTAKS FOR V3.0) ---
+  # Jeg definerer Cloud-init som en diskressource, da den er en virtuel CD-ROM
+  disk {
+    type    = "cloudinit" # Tvinger medietypen til at være Cloud-init
+    slot    = "ide2"      # Standard slot for Cloud-init CD-ROM
+    storage = "vm-storage"
+    size    = "4M"        # Standardstørrelse for Cloud-init drev
+  }
+
 
   # NETVÆRK
   network {
