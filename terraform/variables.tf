@@ -33,5 +33,5 @@ variable "test_vmid" {
 }
 
 variable "test_ip" {
-  default = 99
+  default = 199
 }
