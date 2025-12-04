@@ -33,7 +33,7 @@ variable "k8s_nodes" {
     id            = number
     ip            = number         # Sidste oktet i 192.168.8.x & 10.0.0.x
     pve_host      = string         # "pve2" eller "pve3"
-    storage_name  = string         # "vm-storage" (PVE2) eller "Local-zfs" (PVE3)
+    storage_name  = string         # "vm-storage" (PVE2) eller "local-zfs" (PVE3)
     cores         = number
     memory        = number
   }))
@@ -43,7 +43,7 @@ variable "k8s_nodes" {
       id           = 30101
       ip           = 101
       pve_host     = "pve3"
-      storage_name = "Local-zfs"
+      storage_name = "local-zfs" # KORRIGERET TIL SMÅT
       cores        = 2
       memory       = 4096
     }
@@ -63,7 +63,7 @@ variable "k8s_nodes" {
       id           = 30110
       ip           = 110
       pve_host     = "pve3"
-      storage_name = "Local-zfs"
+      storage_name = "local-zfs" # KORRIGERET TIL SMÅT
       cores        = 4
       memory       = 8192
     }
