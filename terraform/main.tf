@@ -38,16 +38,10 @@ resource "proxmox_vm_qemu" "test_node" {
   memory      = 1024
 
   # NY SYNT: Disk definition for v3.0
-  disk {
-    # 'type' skal være 'disk' (medietypen)
-    type    = "disk"
-    
-    # 'slot' skal være den fulde streng (controller + id)
-    slot    = "scsi0"
-    
-    storage = "vm-storage"
-    size    = "10G"
-  }
+  cloudinit_disk {
+  type = "cdrom"
+  storage = "vm-storage"
+}
 
   # Netværk
   network {
