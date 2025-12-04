@@ -49,6 +49,16 @@
     - name: 3.1 Vent på at K8s API er klar
       ansible.builtin.wait_for_connection:
         timeout: 300
+    # NYT TRIN: Vent indtil alle Masters er registreret i clusteret
+    - name: 3.1.1 Vent på at K8s Mastere er Ready
+      ansible.builtin.shell: |
+        kubectl get nodes | grep master | grep -v 'NotReady' | wc -l
+      register: masters_ready
+      until: masters_ready.stdout.strip() | int == 2
+      retries: 20 # Prøv 20 gange
+      delay: 5    # Vent 5 sekunder mellem forsøgene
+      delegate_to: b-k8s-master-1
+      run_once: true
       
     - name: 3.2 Anvend Topology Label (Fysisk Host)
       # Dette er afgørende for PostgreSQL HA (Anti-Affinity)
