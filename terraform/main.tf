@@ -34,6 +34,8 @@ resource "proxmox_vm_qemu" "k8s_node" {
   clone       = var.proxmox_template_name 
   agent       = 1
   start_at_node_boot = true 
+  additional_wait = 60 
+  scsihw          = "virtio-scsi-single" # Moderne I/O Controller
   
   # Ressourcer 
   cpu {
