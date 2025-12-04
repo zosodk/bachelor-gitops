@@ -24,8 +24,8 @@ provider "proxmox" {
 # --- Oprettelse af Simpel Test VM ---
 resource "proxmox_vm_qemu" "test_node" {
   target_node = "pve2"
-  name        = "b-test-node-30199" # KORRIGERET til 30199
-  vmid        = 30199             # KORRIGERET til 30199
+  name        = "b-test-node-30199" 
+  vmid        = 30199         
   
   # HENTES FRA VARIABEL
   clone       = var.proxmox_template_name 
@@ -46,7 +46,6 @@ resource "proxmox_vm_qemu" "test_node" {
     slot    = "scsi0"
     storage = "vm-storage"
     size    = "32"
-    # size argument fjernet for at bruge skabelonens standardstørrelse (32G)
   }
 
   # --- CLOUD-INIT DREV ---
@@ -54,7 +53,6 @@ resource "proxmox_vm_qemu" "test_node" {
     type    = "cloudinit" 
     slot    = "ide2"      
     storage = "vm-storage"
-    size    = "4M" # Beholdes, da det er størrelsen på CI-drevet, ikke OS-disken
   }
 
 
