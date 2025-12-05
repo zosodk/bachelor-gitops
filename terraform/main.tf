@@ -80,3 +80,4 @@ resource "proxmox_vm_qemu" "k8s_node" {
   
   sshkeys   = file("~/.ssh/id_bachelor_project.pub")
   ciuser    = "gitops" 
+}
