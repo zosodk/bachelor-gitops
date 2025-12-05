@@ -32,7 +32,7 @@
 
     - name: 1.4 Installer K3s på Master 2 (Join til Clusteret)
       ansible.builtin.shell: |
-        curl -sfL https://get.k3s.io | K3S_URL=https://10.0.0.101:6443 K3S_TOKEN="{{ k3s_node_token }}" INSTALL_K3S_EXEC="{{ k3s_master_join_args }}" INSTALL_K3S_VERSION="{{ k3s_version }}" sh -
+        curl -sfL https://get.k3s.io | K3S_URL=https://10.0.0.101:6443 K3S_TOKEN="{{ k3s_node_token }}" K3S_ROLE="server" INSTALL_K3S_EXEC="{{ k3s_master_join_args }}" INSTALL_K3S_VERSION="{{ k3s_version }}" sh -
       when: inventory_hostname == 'b-k8s-master-2' and k3s_node_token is defined
 
     - name: 1.5 Installer K3s på Workers (Join til Clusteret)
