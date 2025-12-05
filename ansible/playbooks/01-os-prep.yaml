@@ -63,3 +63,19 @@
       ansible.builtin.reboot:
       when: "'reboot_required' in ansible_facts.keys()"
       ignore_errors: yes
+
+    - name: Kontroller Python-version og sæt den korrekte version
+      become: Ja
+      shell:
+        cmd: "update-alternatives --set python /usr/bin/python3.8"
+        ignore_errors: True
+
+    - name: Fjern gamle Python-versioner (hvis nødvendigt)
+      become: Ja
+      shell:
+        cmd: "apt-get purge python3.10*"
+        when: ansible_python_version == "3.10"
+
+    - name: Opsæt python-interpreter for at fjerne advarsel
+      become: Ja
+      python_interpreter: "/usr/bin/python3.8"
