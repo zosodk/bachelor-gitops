@@ -1,3 +1,4 @@
+# /ansible/playbooks/01-os-prep.yaml
 ---
 - name: 1. OS Forberedelse for Kubernetes
   hosts: all
@@ -5,12 +6,12 @@
   gather_facts: yes
   
   tasks:
-    - name: Kontroller om swap er aktivt
+    - name: 1.1 Kontroller om swap er aktivt
       ansible.builtin.shell: "swapon -s"
       register: swap_check
       ignore_errors: yes
 
-    - name: Deaktiver Swap (K8s krav)
+    - name: 1.2 Deaktiver Swap (K8s krav)
       when: swap_check.stdout | length > 0
       block:
         - name: Deaktiver swap midlertidigt
@@ -22,7 +23,7 @@
             regexp: '^(\s*)([^#]+\s+swap\s+[^#]+)'
             replace: '# \2'
 
-    - name: Installer Præ-krav (cURL, unzip, LVM2, Python PIP)
+    - name: 1.3 Installer Præ-krav (cURL, unzip, LVM2, Python PIP)
       ansible.builtin.apt:
         name:
           - curl
@@ -35,7 +36,7 @@
         update_cache: yes
       tags: install
 
-    - name: Deaktiver Firewall (UFW) permanent og stop tjenesten
+    - name: 1.4 Deaktiver Firewall (UFW) permanent og stop tjenesten
       ansible.builtin.systemd:
         name: ufw
         state: stopped
@@ -43,7 +44,7 @@
         daemon_reload: yes
       ignore_errors: true
 
-    - name: Opsæt Kernel Moduler (overlay, netfilter)
+    - name: 1.5 Opsæt Kernel Moduler (overlay, netfilter)
       ansible.builtin.blockinfile:
         path: /etc/modules-load.d/k8s.conf
         block: |
@@ -54,7 +55,7 @@
         group: root
         mode: '0644'
 
-    - name: Konfigurer Sysctl til Kubernetes
+    - name: 1.6 Konfigurer Sysctl til Kubernetes
       ansible.builtin.blockinfile:
         path: /etc/sysctl.d/k8s.conf
         block: |
@@ -66,13 +67,20 @@
         group: root
         mode: '0644'
 
-    - name: Reload Sysctl (Anvend kernel ændringer)
+    - name: 1.7 Reload Sysctl (Anvend kernel ændringer)
       ansible.builtin.command: sysctl --system
 
-    - name: Opgrader PIP til seneste version
+    - name: 1.8 Opgrader PIP til seneste version
       ansible.builtin.command: python3 -m pip install --upgrade pip
 
-    - name: Genstart for at sikre kernel ændringer
+    # --- TVUNGET GENSTART ---
+    # Vi fjerner 'when' betingelsen for at garantere genstart
+    - name: 1.9 Tving Genstart for at Aktivere Kernel Moduler
       ansible.builtin.reboot:
-      when: "'reboot_required' in ansible_facts.keys()"
-      ignore_errors: true
+        msg: "Rebooting node to apply Kubernetes kernel settings"
+        reboot_timeout: 600
+        
+    - name: 1.10 Vent på at noder er tilbage
+      ansible.builtin.wait_for_connection:
+        delay: 10
+        timeout: 300
