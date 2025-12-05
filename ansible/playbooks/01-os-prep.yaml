@@ -73,7 +73,10 @@
     - name: Opgrader PIP til seneste version
       ansible.builtin.command: python3 -m pip install --upgrade pip
 
-    - name: Genstart for at sikre kernel ændringer
-      ansible.builtin.reboot:
-      when: "'reboot_required' in ansible_facts.keys()"
-      ignore_errors: true
+- name: Tving Genstart for at Aktivere Kernel Moduler
+  ansible.builtin.reboot:
+    reboot_timeout: 600 # Vent op til 10 minutter på genstart
+
+- name: Vent 60 sekunder på at SSH er fuldt oppe efter genstart
+  ansible.builtin.pause:
+    seconds: 60
