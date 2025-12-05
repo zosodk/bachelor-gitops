@@ -37,8 +37,11 @@
       tags: install
 
     - name: Deaktiver Firewall (UFW) permanent
-      ansible.builtin.command: ufw disable
-      changed_when: true
+      ansible.builtin.systemd:
+        name: ufw
+        state: stopped      # Stopper tjenesten med det samme
+        enabled: no         # Sætter den til 'disabled' ved boot
+        daemon_reload: yes
       ignore_errors: true
 
     - name: Opsæt Kernel Moduler (overlay, netfilter)
