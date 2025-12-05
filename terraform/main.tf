@@ -23,19 +23,20 @@ provider "proxmox" {
 
 # --- Oprettelse af K8s VM'er (Masters & Workers) ---
 resource "proxmox_vm_qemu" "k8s_node" {
-  # Bruger 'for_each' til at iterere gennem de 4 noder defineret i variables.tf
   for_each    = var.k8s_nodes
 
   target_node = each.value.pve_host
   name        = each.key        
   vmid        = each.value.id   
   
-  # Kloning
+  # Kloning og Boot Hang Fix
   clone       = var.proxmox_template_name 
   agent       = 1
   start_at_node_boot = true 
-  additional_wait = 60 
-  scsihw          = "virtio-scsi-single" # Moderne I/O Controller
+  
+  # LØSNING PÅ BOOT HANG: Tvinger VM til at vente længere og bruge bedre I/O
+  additional_wait = 15 
+  scsihw          = "virtio-scsi-single" 
   
   # Ressourcer 
   cpu {
@@ -44,7 +45,7 @@ resource "proxmox_vm_qemu" "k8s_node" {
   }
   memory      = each.value.memory
 
-  # 1. DISK DEFINITION (OS Disk) - BRUGER DEN FUNGERENDE SYNTAKS
+  # 1. DISK DEFINITION (OS Disk)
   disk {
     type    = "disk"
     slot    = "scsi0"
@@ -52,12 +53,11 @@ resource "proxmox_vm_qemu" "k8s_node" {
     size    = "32G" 
   }
 
-  # 2. CLOUD-INIT DREV - BRUGER DEN FUNGERENDE SYNTAKS
+  # 2. CLOUD-INIT DREV - fjernet #size    = "4M"
   disk {
     type    = "cloudinit" 
     slot    = "ide2"      
     storage = each.value.storage_name 
-    size    = "4M"
   }
 
   # NETVÆRK 1 (net0): Offentligt/Management (192.168.8.x)
@@ -67,7 +67,7 @@ resource "proxmox_vm_qemu" "k8s_node" {
     id      = 0
   }
   
-  # NETVÆRK 2 (net1): Privat/Cluster Replikering (10.0.0.x)
+  # NETVÆRK 2 (net1): Privat/Cluster Replikering (10.0.0.x) - Holdt i koden for fremtidig brug
   network {
     bridge  = "vmbr1" 
     model   = "virtio"
@@ -80,4 +80,3 @@ resource "proxmox_vm_qemu" "k8s_node" {
   
   sshkeys   = file("~/.ssh/id_bachelor_project.pub")
   ciuser    = "gitops" 
-}

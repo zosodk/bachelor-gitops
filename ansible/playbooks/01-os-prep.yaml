@@ -1,4 +1,3 @@
-# /ansible/playbooks/01-os-prep.yaml
 ---
 - name: 1. OS Forberedelse for Kubernetes
   hosts: all
@@ -36,11 +35,11 @@
         update_cache: yes
       tags: install
 
-    - name: Deaktiver Firewall (UFW) permanent
+    - name: Deaktiver Firewall (UFW) permanent og stop tjenesten
       ansible.builtin.systemd:
         name: ufw
-        state: stopped      # Stopper tjenesten med det samme
-        enabled: no         # Sætter den til 'disabled' ved boot
+        state: stopped
+        enabled: no
         daemon_reload: yes
       ignore_errors: true
 
@@ -73,10 +72,7 @@
     - name: Opgrader PIP til seneste version
       ansible.builtin.command: python3 -m pip install --upgrade pip
 
-    - name: Tving Genstart for at Aktivere Kernel Moduler
+    - name: Genstart for at sikre kernel ændringer
       ansible.builtin.reboot:
-        reboot_timeout: 600 # Vent op til 10 minutter på genstart
-
-    - name: Vent 60 sekunder på at SSH er fuldt oppe efter genstart
-      ansible.builtin.pause:
-        seconds: 60
+      when: "'reboot_required' in ansible_facts.keys()"
+      ignore_errors: true

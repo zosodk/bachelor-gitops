@@ -1,3 +1,4 @@
+# /ansible/playbooks/02-k3s-install.yaml
 ---
 # ==============================================================================
 # PLAY 1: K3s Installation (Starter K3s på noderne)
@@ -8,8 +9,9 @@
   gather_facts: no
   vars:
     k3s_version: "v1.34.2+k3s1" 
-    k3s_master_init_args: "--cluster-init --bind-address 0.0.0.0 --advertise-address 192.168.8.101 --disable traefik --disable servicelb"
-    k3s_worker_args: ""
+    k3s_master_init_args: "--cluster-init --bind-address {{ internal_ip }} --advertise-address {{ internal_ip }} --disable traefik --disable servicelb --tls-san 192.168.8.101 --tls-san 192.168.8.102"
+    k3s_master_join_args: "--bind-address {{ internal_ip }} --advertise-address {{ internal_ip }} --disable traefik --disable servicelb --tls-san 192.168.8.101 --tls-san 192.168.8.102"
+    k3s_worker_args: "--node-ip {{ internal_ip }}"
 
   tasks:
     - name: 1.1 Installer K3s på Master 1 (Cluster Init)
@@ -30,23 +32,22 @@
 
     - name: 1.4 Installer K3s på Master 2 (Join til Clusteret)
       ansible.builtin.shell: |
-        curl -sfL https://get.k3s.io | K3S_URL=https://192.168.8.101:6443 K3S_TOKEN="{{ k3s_node_token }}" INSTALL_K3S_VERSION="{{ k3s_version }}" sh -s - server
+        curl -sfL https://get.k3s.io | K3S_URL=https://10.0.0.101:6443 K3S_TOKEN="{{ k3s_node_token }}" K3S_ROLE="server" INSTALL_K3S_SKIP_START="true" INSTALL_K3S_EXEC="{{ k3s_master_join_args }}" INSTALL_K3S_VERSION="{{ k3s_version }}" sh -
       when: inventory_hostname == 'b-k8s-master-2' and k3s_token_result is defined
+
+    - name: 1.4.1 Start K3s Service på Master 2
+      ansible.builtin.systemd:
+        name: k3s.service
+        state: started
+        daemon_reload: yes
+      when: inventory_hostname == 'b-k8s-master-2'
 
     - name: 1.5 Installer K3s på Workers (Join til Clusteret)
       ansible.builtin.shell: |
-        curl -sfL https://get.k3s.io | K3S_URL=https://192.168.8.101:6443 K3S_TOKEN="{{ k3s_node_token }}" INSTALL_K3S_EXEC="{{ k3s_worker_args }}" INSTALL_K3S_VERSION="{{ k3s_version }}" sh -s - agent
+        curl -sfL https://get.k3s.io | K3S_URL=https://10.0.0.101:6443 K3S_TOKEN="{{ k3s_node_token }}" INSTALL_K3S_EXEC="{{ k3s_worker_args }}" INSTALL_K3S_VERSION="{{ k3s_version }}" sh -
       when: inventory_hostname is in groups['k3s_workers'] and k3s_token_result is defined
 
-    - name: 1.6 Giv gitops bruger Læseadgang til Kubeconfig
-      ansible.builtin.file:
-        path: /etc/rancher/k3s/k3s.yaml
-        owner: gitops
-        group: gitops
-        mode: '0644'
-      when: inventory_hostname == 'b-k8s-master-1' and k3s_token_result is defined
-      
-    - name: 1.7 Kopier Kubeconfig til Admin Node (30100)
+    - name: 1.6 Kopier Kubeconfig til Admin Node (30100)
       ansible.builtin.fetch:
         src: /etc/rancher/k3s/k3s.yaml
         dest: /home/gitops/.kube/config-k3s
@@ -65,14 +66,16 @@
     kubeconfig_path: "/home/gitops/.kube/config-k3s"
     
   tasks:
-    - name: 2.1 Vent på at K8s API er klar (Localhost check)
-      ansible.builtin.wait_for:
-        host: 192.168.8.101 
-        port: 6443
-        timeout: 300
-      delegate_to: localhost
+    - name: 2.1 Vent på at K8s API er klar (Tjekkes fra Master 1 INDEFRA 10-nettet)
+      ansible.builtin.shell: |
+        curl -s -k --location --max-time 10 https://10.0.0.101:6443/ping
+      register: k3s_ping
+      until: k3s_ping.rc == 0
+      retries: 30 
+      delay: 10
+      delegate_to: b-k8s-master-1 
 
-    - name: 2.2 Vent på at alle 4 Noder er Ready
+    - name: 2.2 Vent på at alle 4 Noder er Ready (Løser 'NotFound' fejl)
       ansible.builtin.shell: |
         export KUBECONFIG={{ kubeconfig_path }}
         kubectl get nodes | grep -v 'NotReady' | grep -v 'NAME' | wc -l

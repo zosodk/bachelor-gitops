@@ -43,7 +43,7 @@ variable "k8s_nodes" {
       id           = 30101
       ip           = 101
       pve_host     = "pve3"
-      storage_name = "vm-storage" # KORRIGERET TIL SMÅT
+      storage_name = "vm-storage" 
       cores        = 2
       memory       = 4096
     }
@@ -63,7 +63,7 @@ variable "k8s_nodes" {
       id           = 30110
       ip           = 110
       pve_host     = "pve3"
-      storage_name = "vm-storage" # KORRIGERET TIL SMÅT
+      storage_name = "vm-storage" 
       cores        = 4
       memory       = 8192
     }
