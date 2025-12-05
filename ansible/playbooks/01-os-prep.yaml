@@ -59,23 +59,17 @@
     - name: Reload Sysctl (Anvend kernel ændringer)
       ansible.builtin.command: sysctl --system
 
+    - name: 7. Installer Python PIP og Opgrader
+      ansible.builtin.apt:
+      name: python3-pip
+      state: present
+      update_cache: yes
+
+    - name: 8. Opgrader PIP til seneste version
+      ansible.builtin.command: python3 -m pip install --upgrade pip
+
     - name: Genstart for at sikre kernel ændringer
       ansible.builtin.reboot:
       when: "'reboot_required' in ansible_facts.keys()"
       ignore_errors: yes
-
-    - name: Kontroller Python-version og sæt den korrekte version
-      become: yes
-      shell: python3.8 -m ensurepip && pip3.8 install --upgrade pip || { echo "Error installing Python"; exit 1; }
-
-    - name: Fjern gamle Python-versioner (hvis nødvendigt)
-      become: yes
-      shell:
-        cmd: "apt-get purge python3.10*"
-        when: ansible_python_version == "3.10"
-
-    - name: Opsæt python-interpreter for at fjerne advarsel
-      become: yes
-      set_fact:
-        ansible_python_interpreter: "/usr/bin/python3.8"
 
