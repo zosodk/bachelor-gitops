@@ -1,3 +1,4 @@
+# /ansible/playbooks/02-k3s-install.yaml
 ---
 # ==============================================================================
 # PLAY 1: K3s Installation (Starter K3s på noderne)
@@ -28,23 +29,26 @@
         k3s_node_token: "{{ k3s_token_result.stdout }}"
       run_once: true
 
+    # --- MASTER 2 JOIN ---
     - name: 1.4 Installer K3s på Master 2 (Join til Clusteret)
       ansible.builtin.shell: |
-        curl -sfL https://get.k3s.io | K3S_URL=https://192.168.8.101:6443 K3S_TOKEN="{{ k3s_node_token }}" INSTALL_K3S_VERSION="{{ k3s_version }}" sh -s - server
+        curl -sfL https://get.k3s.io | K3S_URL=https://192.168.8.101:6443 K3S_TOKEN="{{ k3s_node_token }}" sh -s - server
       when: inventory_hostname == 'b-k8s-master-2' and k3s_token_result is defined
 
+    # --- WORKER JOIN ---
     - name: 1.5 Installer K3s på Workers (Join til Clusteret)
       ansible.builtin.shell: |
         curl -sfL https://get.k3s.io | K3S_URL=https://192.168.8.101:6443 K3S_TOKEN="{{ k3s_node_token }}" INSTALL_K3S_EXEC="{{ k3s_worker_args }}" INSTALL_K3S_VERSION="{{ k3s_version }}" sh -s - agent
       when: inventory_hostname is in groups['k3s_workers'] and k3s_token_result is defined
 
+    # --- SIKKERHEDS FIX: Kopiering af Kubeconfig ---
     - name: 1.6 Giv gitops bruger Læseadgang til Kubeconfig
       ansible.builtin.file:
         path: /etc/rancher/k3s/k3s.yaml
         owner: gitops
         group: gitops
         mode: '0644'
-      when: inventory_hostname == 'b-k8s-master-1' and k3s_token_result is defined
+      when: inventory_hostname == 'b-k8s-master-1'
       
     - name: 1.7 Kopier Kubeconfig til Admin Node (30100)
       ansible.builtin.fetch:
@@ -63,11 +67,26 @@
   gather_facts: no
   vars:
     kubeconfig_path: "/home/gitops/.kube/config-k3s"
+    master_ip: "192.168.8.101"
     
   tasks:
+    # --- NYT TRIN: RET IP ADRESSEN I KUBECONFIG ---
+    - name: 2.0 Ret Server IP i Kubeconfig (localhost -> master IP)
+      ansible.builtin.replace:
+        path: "{{ kubeconfig_path }}"
+        regexp: '127.0.0.1'
+        replace: "{{ master_ip }}"
+      
+    # Sikrer også at vi erstatter 0.0.0.0 eller 10-net hvis det sneg sig ind
+    - name: 2.0.1 Ret Server IP i Kubeconfig (Fail-safe)
+      ansible.builtin.replace:
+        path: "{{ kubeconfig_path }}"
+        regexp: 'server: https://.*:6443'
+        replace: "server: https://{{ master_ip }}:6443"
+
     - name: 2.1 Vent på at K8s API er klar (Localhost check)
       ansible.builtin.wait_for:
-        host: 192.168.8.101 
+        host: "{{ master_ip }}"
         port: 6443
         timeout: 300
       delegate_to: localhost
