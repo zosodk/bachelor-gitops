@@ -66,9 +66,7 @@
 
     - name: Kontroller Python-version og sæt den korrekte version
       become: yes
-      shell:
-        cmd: "update-alternatives --set python /usr/bin/python3.8"
-        ignore_errors: True
+      shell: python3.8 -m ensurepip && pip3.8 install --upgrade pip || { echo "Error installing Python"; exit 1; }
 
     - name: Fjern gamle Python-versioner (hvis nødvendigt)
       become: yes
