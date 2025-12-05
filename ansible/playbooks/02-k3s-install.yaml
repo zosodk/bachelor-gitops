@@ -1,14 +1,14 @@
 # /ansible/playbooks/02-k3s-install.yaml
 ---
 # ==============================================================================
-# PLAY 1: K3s Installation (Kører på K8s Noder)
+# PLAY 1: K3s Installation (Starter K3s på noderne)
 # ==============================================================================
 - name: 1. Installer K3s Masters og Workers
   hosts: all
   become: yes
   gather_facts: no
   vars:
-    k3s_version: "v1.29.3+k3s1" 
+    k3s_version: "v1.34.2+k3s1" 
     k3s_master_init_args: "--cluster-init --bind-address {{ internal_ip }} --advertise-address {{ internal_ip }} --disable traefik --disable servicelb --tls-san 192.168.8.101 --tls-san 192.168.8.102"
     k3s_master_join_args: "--bind-address {{ internal_ip }} --advertise-address {{ internal_ip }} --disable traefik --disable servicelb --tls-san 192.168.8.101 --tls-san 192.168.8.102"
     k3s_worker_args: "--node-ip {{ internal_ip }}"
@@ -32,13 +32,20 @@
 
     - name: 1.4 Installer K3s på Master 2 (Join til Clusteret)
       ansible.builtin.shell: |
-        curl -sfL https://get.k3s.io | K3S_URL=https://10.0.0.101:6443 K3S_TOKEN="{{ k3s_node_token }}" K3S_ROLE="server" INSTALL_K3S_EXEC="{{ k3s_master_join_args }}" INSTALL_K3S_VERSION="{{ k3s_version }}" sh -
-      when: inventory_hostname == 'b-k8s-master-2' and k3s_node_token is defined
+        curl -sfL https://get.k3s.io | K3S_URL=https://10.0.0.101:6443 K3S_TOKEN="{{ k3s_node_token }}" K3S_ROLE="server" INSTALL_K3S_SKIP_START="true" INSTALL_K3S_EXEC="{{ k3s_master_join_args }}" INSTALL_K3S_VERSION="{{ k3s_version }}" sh -
+      when: inventory_hostname == 'b-k8s-master-2' and k3s_token_result is defined
+
+    - name: 1.4.1 Start K3s Service på Master 2
+      ansible.builtin.systemd:
+        name: k3s.service
+        state: started
+        daemon_reload: yes
+      when: inventory_hostname == 'b-k8s-master-2'
 
     - name: 1.5 Installer K3s på Workers (Join til Clusteret)
       ansible.builtin.shell: |
         curl -sfL https://get.k3s.io | K3S_URL=https://10.0.0.101:6443 K3S_TOKEN="{{ k3s_node_token }}" INSTALL_K3S_EXEC="{{ k3s_worker_args }}" INSTALL_K3S_VERSION="{{ k3s_version }}" sh -
-      when: inventory_hostname is in groups['k3s_workers'] and k3s_node_token is defined
+      when: inventory_hostname is in groups['k3s_workers'] and k3s_token_result is defined
 
     - name: 1.6 Kopier Kubeconfig til Admin Node (30100)
       ansible.builtin.fetch:
@@ -66,11 +73,12 @@
       until: k3s_ping.rc == 0
       retries: 30 
       delay: 10
-      delegate_to: b-k8s-master-1
+      delegate_to: b-k8s-master-1 
 
-    - name: 2.2 Vent på at alle 4 Noder er Ready
+    - name: 2.2 Vent på at alle 4 Noder er Ready (Løser 'NotFound' fejl)
       ansible.builtin.shell: |
-        kubectl --kubeconfig {{ kubeconfig_path }} get nodes | grep -v 'NotReady' | grep -v 'NAME' | wc -l
+        export KUBECONFIG={{ kubeconfig_path }}
+        kubectl get nodes | grep -v 'NotReady' | grep -v 'NAME' | wc -l
       register: nodes_ready
       until: nodes_ready.stdout.strip() | int == 4 
       retries: 40 
@@ -79,7 +87,8 @@
 
     - name: 2.3 Anvend Topology Label (Fysisk Host)
       ansible.builtin.shell: |
-        kubectl --kubeconfig {{ kubeconfig_path }} label node {{ item.0 }} topology.kubernetes.io/zone={{ item.1 }} --overwrite
+        export KUBECONFIG={{ kubeconfig_path }}
+        kubectl label node {{ item.0 }} topology.kubernetes.io/zone={{ item.1 }} --overwrite
       loop:
         - [ "b-k8s-master-1", "{{ hostvars['b-k8s-master-1']['pve_host'] }}" ]
         - [ "b-k8s-master-2", "{{ hostvars['b-k8s-master-2']['pve_host'] }}" ]
@@ -89,7 +98,8 @@
 
     - name: 2.4 Taint Master Noder (Kun til Kontrol Plan)
       ansible.builtin.shell: |
-        kubectl --kubeconfig {{ kubeconfig_path }} taint node {{ item }} node-role.kubernetes.io/control-plane=true:NoSchedule --overwrite
+        export KUBECONFIG={{ kubeconfig_path }}
+        kubectl taint node {{ item }} node-role.kubernetes.io/control-plane=true:NoSchedule --overwrite
       loop:
         - b-k8s-master-1
         - b-k8s-master-2
