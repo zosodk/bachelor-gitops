@@ -23,7 +23,7 @@
             regexp: '^(\s*)([^#]+\s+swap\s+[^#]+)'
             replace: '# \2'
 
-    - name: Installer Præ-krav (cURL, unzip, LVM2)
+    - name: Installer Præ-krav (cURL, unzip, LVM2, Python PIP)
       ansible.builtin.apt:
         name:
           - curl
@@ -31,8 +31,15 @@
           - lvm2 
           - software-properties-common
           - python3-pip
+          - ufw
         state: present
         update_cache: yes
+      tags: install
+
+    - name: Deaktiver Firewall (UFW) permanent
+      ansible.builtin.command: ufw disable
+      changed_when: true
+      ignore_errors: true
 
     - name: Opsæt Kernel Moduler (overlay, netfilter)
       ansible.builtin.blockinfile:
@@ -66,4 +73,4 @@
     - name: Genstart for at sikre kernel ændringer
       ansible.builtin.reboot:
       when: "'reboot_required' in ansible_facts.keys()"
-      ignore_errors: yes
+      ignore_errors: true
