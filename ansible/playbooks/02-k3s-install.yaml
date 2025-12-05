@@ -59,12 +59,14 @@
     kubeconfig_path: "/home/gitops/.kube/config-k3s"
     
   tasks:
-    - name: 2.1 Vent på at K8s API er klar (Localhost check)
-      ansible.builtin.wait_for:
-        host: 192.168.8.101 
-        port: 6443
-        timeout: 300
-      delegate_to: localhost
+    - name: 2.1 Vent på at K8s API er klar (Tjekkes fra Master 1 INDEFRA 10-nettet)
+      ansible.builtin.shell: |
+        curl -s -k --location --max-time 10 https://10.0.0.101:6443/ping
+      register: k3s_ping
+      until: k3s_ping.rc == 0
+      retries: 30 
+      delay: 10
+      delegate_to: b-k8s-master-1
 
     - name: 2.2 Vent på at alle 4 Noder er Ready
       ansible.builtin.shell: |
