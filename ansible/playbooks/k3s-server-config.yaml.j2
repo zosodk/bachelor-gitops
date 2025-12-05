@@ -1,0 +1,8 @@
+# /ansible/k3s-server-config.yaml.j2
+server: https://192.168.8.101:6443
+token: {{ k3s_node_token }}
+tls-san: 192.168.8.101
+tls-san: 192.168.8.102
+disable:
+  - servicelb
+  - traefik

@@ -33,16 +33,26 @@
 
     # --- Master 2: Tving Serverrolle og Manuel Start (FIX) ---
 
-    - name: 1.4 Installer K3s på Master 2 (Join til Clusteret)
+    - name: 1.4 Installer K3s Binærfil på Master 2
       ansible.builtin.shell: |
-        curl -sfL https://get.k3s.io | K3S_URL=https://192.168.8.101:6443 K3S_TOKEN="{{ k3s_node_token }}" K3S_ROLE="server" INSTALL_K3S_SKIP_START="true" INSTALL_K3S_SERVER_ONLY="true" INSTALL_K3S_EXEC="{{ k3s_master_join_args }}" INSTALL_K3S_VERSION="{{ k3s_version }}" sh -
+      # Kører installationen PÅ MASTER 2 UDEN JOIN ARGUMENTER for at sikre binærfilen er der.
+        curl -sfL https://get.k3s.io | K3S_ROLE="server" INSTALL_K3S_SKIP_START="true" INSTALL_K3S_VERSION="{{ k3s_version }}" sh -
       when: inventory_hostname == 'b-k8s-master-2' and k3s_token_result is defined
 
+    - name: 1.4.1 Opret K3s Server Konfigurationsfil
+    # Opretter konfigurationsfilen med join-argumenter i stedet for at stole på installationsscriptet.
+      ansible.builtin.template: # Bruger 'template' for at oprette filen fra en lokal skabelon (Næste trin)
+        src: k3s-server-config.yaml.j2
+        dest: /etc/rancher/k3s/config.yaml
+        owner: root
+        group: root
+        mode: '0600'
+      when: inventory_hostname == 'b-k8s-master-2'
 
-    - name: 1.4.1 Start K3s Service på Master 2
+    - name: 1.4.2 Start K3s Service på Master 2
       ansible.builtin.systemd:
         name: k3s.service
-        state: started
+        state: restarted
         daemon_reload: yes
       when: inventory_hostname == 'b-k8s-master-2'
 
