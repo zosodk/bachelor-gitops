@@ -1,0 +1,147 @@
+# ==============================================================================
+# UDVIKLING (Automatisk Sync)
+# ==============================================================================
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: bachelor-dev
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/zosodk/bachelor-gitops.git
+    targetRevision: main
+    path: kubernetes/overlays/dev
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: bachelor-dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+
+---
+# ==============================================================================
+# TEST & KVALITETSSIKRING (Automatisk Sync)
+# ==============================================================================
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: bachelor-tst
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/zosodk/bachelor-gitops.git
+    targetRevision: main
+    path: kubernetes/overlays/tst
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: bachelor-tst
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: bachelor-sit
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/zosodk/bachelor-gitops.git
+    targetRevision: main
+    path: kubernetes/overlays/sit
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: bachelor-sit
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: bachelor-fkt
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/zosodk/bachelor-gitops.git
+    targetRevision: main
+    path: kubernetes/overlays/fkt
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: bachelor-fkt
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+
+---
+# ==============================================================================
+# PRE-PROD & PRODUKTION (MANUEL SYNC / GATES)
+# ==============================================================================
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: bachelor-tfe
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/zosodk/bachelor-gitops.git
+    targetRevision: main
+    path: kubernetes/overlays/tfe
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: bachelor-tfe
+  # BEMÆRK: Ingen 'automated' syncPolicy her. Dette er en manuel gate.
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: bachelor-prd
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/zosodk/bachelor-gitops.git
+    targetRevision: main
+    path: kubernetes/overlays/prd
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: bachelor-prd
+  # BEMÆRK: Ingen 'automated' syncPolicy her. Dette er en manuel gate.
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
