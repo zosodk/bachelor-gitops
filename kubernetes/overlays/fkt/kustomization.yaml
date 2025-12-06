@@ -7,6 +7,13 @@ namespace: bachelor-fkt
 namePrefix: fkt-
 commonLabels:
   env: fkt
+secretGenerator:
+- name: db-secret
+  literals:
+  - username=fkt_user
+  - password=fkt_pass
+  options:
+    disableNameSuffixHash: true
 patches:
 - target:
     kind: Deployment

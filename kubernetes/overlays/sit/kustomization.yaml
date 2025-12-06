@@ -7,6 +7,13 @@ namespace: bachelor-sit
 namePrefix: sit-
 commonLabels:
   env: sit
+secretGenerator:
+- name: db-secret
+  literals:
+  - username=sit_user
+  - password=sit_pass
+  options:
+    disableNameSuffixHash: true
 patches:
 - target:
     kind: Deployment
@@ -14,4 +21,4 @@ patches:
   patch: |-
     - op: replace
       path: /spec/replicas
-      value: 1
+      value: 2

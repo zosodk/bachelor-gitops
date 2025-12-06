@@ -7,6 +7,13 @@ namespace: bachelor-prd
 namePrefix: prd-
 commonLabels:
   env: production
+secretGenerator:
+- name: db-secret
+  literals:
+  - username=prod_admin
+  - password=VERY_SECRET_PROD_PASSWORD_123
+  options:
+    disableNameSuffixHash: true
 patches:
 - target:
     kind: Deployment

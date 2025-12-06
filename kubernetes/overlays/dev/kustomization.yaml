@@ -1,30 +1,19 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-
-# Peg på basen
 resources:
 - ../../base
 - namespace.yaml
-
-# Sæt namespace for alle ressourcer
 namespace: bachelor-dev
-
-# Tilføj prefix så vi kan se det er DEV
 namePrefix: dev-
-
-# Tilføj labels til alt
 commonLabels:
-  environment: development
-  project: bachelor
-
-# Generer Database Secret (Specifikt for DEV)
+  env: dev
 secretGenerator:
 - name: db-secret
   literals:
   - username=dev_user
-  - password=dev_pass_secure # I prod bruger vi SealedSecrets/Vault
-
-# Patch: Vi vil kun have 1 replika i DEV
+  - password=dev_pass_secure
+  options:
+    disableNameSuffixHash: true # <--- DETTE ER FIXET
 patches:
 - target:
     kind: Deployment
