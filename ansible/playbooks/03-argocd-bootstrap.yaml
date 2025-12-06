@@ -1,0 +1,64 @@
+# /ansible/playbooks/03-argocd-bootstrap.yaml
+---
+- name: Bootstrap ArgoCD (GitOps Engine)
+  hosts: localhost
+  become: no
+  gather_facts: no
+  vars:
+    # Jeg bruger standard config placeringen, som jeg satte op i Playbook 2
+    kubeconfig_path: "{{ ansible_env.HOME }}/.kube/config"
+
+  tasks:
+    - name: 1. Opret ArgoCD Namespace
+      ansible.builtin.shell: |
+        kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+
+    - name: 2. Installer ArgoCD (Stable Manifest)
+      ansible.builtin.shell: |
+        kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+
+    - name: 3. Vent på at ArgoCD Server er klar (Dette kan tage tid)
+      ansible.builtin.shell: |
+        kubectl wait --for=condition=Ready pods --all -n argocd --timeout=300s
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      # Jeg ignorerer fejl første gang, da pods måske ikke er skabt endnu, og retrier
+      register: result
+      until: result.rc == 0
+      retries: 20
+      delay: 15
+
+    - name: 4. Patch ArgoCD Server til NodePort (For ekstern adgang)
+      ansible.builtin.shell: |
+        kubectl patch svc argocd-server -n argocd -p '{"spec": {"type": "NodePort"}}'
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+
+    - name: 5. Find NodePort Portnummer
+      ansible.builtin.shell: |
+        kubectl get svc argocd-server -n argocd -o jsonpath='{.spec.ports[?(@.name=="https")].nodePort}'
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: argocd_port
+
+    - name: 6. Hent Initial Admin Password
+      ansible.builtin.shell: |
+        kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: argocd_password
+
+    - name: 7. VIS ADGANGSDATA (Gem disse!)
+      ansible.builtin.debug:
+        msg: 
+          - "--------------------------------------------------------"
+          - "ARGO CD ER INSTALLERET OG KLAR"
+          - "--------------------------------------------------------"
+          - "URL: https://192.168.8.101:{{ argocd_port.stdout }}"
+          - "Brugernavn: admin"
+          - "Password: {{ argocd_password.stdout }}"
+          - "--------------------------------------------------------"
