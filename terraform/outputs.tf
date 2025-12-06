@@ -1,0 +1,1 @@
+#Husk at få denne til at lave inventory output til ansible automatisk
