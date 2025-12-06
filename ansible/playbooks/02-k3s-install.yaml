@@ -70,7 +70,7 @@
 - name: 2. Cluster Hardening og Labeling (Kørt fra Admin Node)
   hosts: localhost 
   become: no
-  gather_facts: no
+  gather_facts: yes
   vars:
     kubeconfig_path: "/home/gitops/.kube/config-k3s"
     master_ip: "192.168.8.101"
