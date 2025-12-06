@@ -3,9 +3,9 @@
 - name: Bootstrap ArgoCD (GitOps Engine)
   hosts: localhost
   become: no
-  gather_facts: no
+  gather_facts: yes # RETTELSE: Skal være yes for at læse ansible_env korrekt
   vars:
-    # Jeg bruger standard config placeringen, som jeg satte op i Playbook 2
+    # JEg bruger standard config placeringen
     kubeconfig_path: "{{ ansible_env.HOME }}/.kube/config"
 
   tasks:
@@ -15,44 +15,56 @@
       environment:
         KUBECONFIG: "{{ kubeconfig_path }}"
 
-    - name: 2. Installer ArgoCD (Stable Manifest)
+    # NYT TRIN: Download filen først for at undgå netværks-timeout under installation - been there and failed
+    - name: 2. Download ArgoCD Manifest
+      ansible.builtin.get_url:
+        url: https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+        dest: /tmp/argocd-install.yaml
+        mode: '0644'
+
+    - name: 3. Installer ArgoCD (Fra lokal fil)
       ansible.builtin.shell: |
-        kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+        kubectl apply -n argocd -f /tmp/argocd-install.yaml
       environment:
         KUBECONFIG: "{{ kubeconfig_path }}"
+      # Jeg tilføjer retries for at håndtere API-server belastning
+      register: install_result
+      until: install_result.rc == 0
+      retries: 5
+      delay: 10
 
-    - name: 3. Vent på at ArgoCD Server er klar (Dette kan tage tid)
+    - name: 4. Vent på at ArgoCD Server er klar (Dette kan tage tid)
       ansible.builtin.shell: |
         kubectl wait --for=condition=Ready pods --all -n argocd --timeout=300s
       environment:
         KUBECONFIG: "{{ kubeconfig_path }}"
-      # Jeg ignorerer fejl første gang, da pods måske ikke er skabt endnu, og retrier
+      # Jeg ignorerer fejl første gang, da pods måske ikke er skabt endnu
       register: result
       until: result.rc == 0
       retries: 20
       delay: 15
 
-    - name: 4. Patch ArgoCD Server til NodePort (For ekstern adgang)
+    - name: 5. Patch ArgoCD Server til NodePort (For ekstern adgang)
       ansible.builtin.shell: |
         kubectl patch svc argocd-server -n argocd -p '{"spec": {"type": "NodePort"}}'
       environment:
         KUBECONFIG: "{{ kubeconfig_path }}"
 
-    - name: 5. Find NodePort Portnummer
+    - name: 6. Find NodePort Portnummer
       ansible.builtin.shell: |
         kubectl get svc argocd-server -n argocd -o jsonpath='{.spec.ports[?(@.name=="https")].nodePort}'
       environment:
         KUBECONFIG: "{{ kubeconfig_path }}"
       register: argocd_port
 
-    - name: 6. Hent Initial Admin Password
+    - name: 7. Hent Initial Admin Password
       ansible.builtin.shell: |
         kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
       environment:
         KUBECONFIG: "{{ kubeconfig_path }}"
       register: argocd_password
 
-    - name: 7. VIS ADGANGSDATA (Gem disse!)
+    - name: 8. VIS ADGANGSDATA (Gem disse!)
       ansible.builtin.debug:
         msg: 
           - "--------------------------------------------------------"
