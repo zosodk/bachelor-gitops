@@ -15,12 +15,10 @@
       environment:
         KUBECONFIG: "{{ kubeconfig_path }}"
 
-    # NYT TRIN: Download filen først for at undgå netværks-timeout under installation - been there and failed
+    # NYT TRIN: Download filen med tvungen IPv4 (curl -4) for at omgå IPv6 timeout
     - name: 2. Download ArgoCD Manifest
-      ansible.builtin.get_url:
-        url: https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
-        dest: /tmp/argocd-install.yaml
-        mode: '0644'
+      ansible.builtin.shell: |
+        curl -4 -sSL -o /tmp/argocd-install.yaml https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 
     - name: 3. Installer ArgoCD (Fra lokal fil)
       ansible.builtin.shell: |
