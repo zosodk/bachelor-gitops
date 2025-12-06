@@ -3,6 +3,7 @@ kind: Kustomization
 resources:
 - ../../base
 - namespace.yaml
+- debug-pod.yaml
 namespace: bachelor-dev
 namePrefix: dev-
 commonLabels:
