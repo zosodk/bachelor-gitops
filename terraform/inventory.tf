@@ -8,3 +8,4 @@ resource "local_file" "ansible_inventory" {
   })
   filename = "../ansible/inventory.yaml"
   file_permission = "0644"
+}
