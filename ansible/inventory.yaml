@@ -1,34 +1,29 @@
-# /ansible/inventory.yaml
+# /terraform/templates/inventory.tftpl
+# GENERERET AF OPENTOFU - SKAL IKKE REDIGERES MANUELT
 
-# Grupper for K3s-clusteret
 all:
   children:
     k3s_masters:
       hosts:
-        # PVE3 (NVMe)
         b-k8s-master-1:
           ansible_host: 192.168.8.101
           internal_ip: 10.0.0.101
           pve_host: pve3
-        # PVE2 (SSD)
         b-k8s-master-2:
           ansible_host: 192.168.8.102
           internal_ip: 10.0.0.102
           pve_host: pve2
       vars:
         ansible_user: gitops
-        # LØSNING PÅ PYTHON ADVARSEL: Eksplicit sti til Python 3
-        ansible_python_interpreter: /usr/bin/python3 
+        ansible_python_interpreter: /usr/bin/python3
         ansible_ssh_private_key_file: ~/.ssh/id_bachelor_project
-        
+
     k3s_workers:
       hosts:
-        # PVE3 (NVMe)
         b-k8s-worker-1:
           ansible_host: 192.168.8.110
           internal_ip: 10.0.0.110
           pve_host: pve3
-        # PVE2 (SSD)
         b-k8s-worker-2:
           ansible_host: 192.168.8.111
           internal_ip: 10.0.0.111
