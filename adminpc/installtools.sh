@@ -92,8 +92,27 @@ if [ -d "terraform" ]; then
     if [ ! -f "credentials.auto.tfvars" ]; then
         echo "----------------------------------------------------------------"
         echo "VIGTIGT: 'credentials.auto.tfvars' mangler i terraform mappen!"
-        echo "Du skal oprette den manuelt med dine secrets før du kører 'tofu plan'."
+        echo "Opret filen med 'nano credentials.auto.tfvars' og indsæt følgende:"
+        echo ""
+        echo 'proxmox_api_url       = "https://192.168.8.20:8006/api2/json"'
+        echo 'proxmox_api_user      = "tf-user@pve"'
+        echo 'proxmox_token_id      = "tf-user@pve!bachelor-project"'
+        echo 'proxmox_token_secret  = "DIN_TOKEN_SECRET_HER"'
+        echo 'proxmox_password      = "DIT_PASSWORD_HER"'
+        echo 'proxmox_template_name = "ubuntu-2204-cloud-base"'
+        echo ""
+        echo "En fil 'credentials.auto.tfvars.example' er oprettet som skabelon."
         echo "----------------------------------------------------------------"
+        
+        # Opret eksempel fil
+        cat <<EOF > credentials.auto.tfvars.example
+proxmox_api_url       = "https://192.168.8.20:8006/api2/json"
+proxmox_api_user      = "tf-user@pve"
+proxmox_token_id      = "tf-user@pve!bachelor-project"
+proxmox_token_secret  = "DIN_TOKEN_SECRET_HER"
+proxmox_password      = "DIT_PASSWORD_HER"
+proxmox_template_name = "ubuntu-2204-cloud-base"
+EOF
     fi
     cd ..
 fi
@@ -108,3 +127,4 @@ echo "Kubectl:  $(kubectl version --client --output=yaml | grep gitVersion | awk
 echo "Azure CLI: $(az --version | head -n 1)"
 echo "-----------------------------------------------------"
 echo "Husk at logge ind og ud (eller køre 'source ~/.bashrc') for at opdatere PATH."
+echo "Det anbefales at genstarte maskinen nu for at sikre alle opdateringer træder i kraft."
