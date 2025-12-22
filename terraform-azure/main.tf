@@ -18,7 +18,7 @@ provider "azurerm" {
 
 resource "azurerm_resource_group" "bachelor_rg" {
   name     = "bachelor-cloud-rg"
-  location = "West Europe" # (Tæt på DK for lav latency)
+  location = "North Europe" # (Tæt på DK for lav latency)
 }
 
 # 2. Azure Kubernetes Service (AKS)
@@ -55,3 +55,18 @@ resource "azurerm_kubernetes_cluster" "aks_prd" {
 output "get_credentials_cmd" {
   value = "az aks get-credentials --resource-group ${azurerm_resource_group.bachelor_rg.name} --name ${azurerm_kubernetes_cluster.aks_prd.name}"
 }
+# Manuel kørsel af denne kommando er nødvendig for at konfigurere kubectl til at forbinde til AKS klyngen.
+#az provider register --namespace Microsoft.ContainerService
+# Registrer Compute (VM'er til noderne)
+#az provider register --namespace Microsoft.Compute
+# Registrer Network (VNet, Load Balancer)
+#az provider register --namespace Microsoft.Network
+# Registrer Storage (Diske til databaser/PVC)
+#az provider register --namespace Microsoft.Storage
+# Registrer OperationsManagement (Nødvendig for AKS logs/metrics)
+#az provider register --namespace Microsoft.OperationsManagement
+#az provider register --namespace Microsoft.OperationalInsights
+# Registrer ContainerService (AKS)
+#az provider register --namespace Microsoft.ContainerService
+#az provider show -n Microsoft.ContainerService --query "registrationState"
+# Tjek registreringsstatus: skal sige "Registered"
