@@ -57,11 +57,19 @@ if [ -f "$SSH_KEY_PATH" ]; then
     eval "$(ssh-agent -s)"
     ssh-add "$SSH_KEY_PATH"
     
+    # Opret ssh config for at sikre git virker uden manuel agent start i fremtiden
+    if [ ! -f "$HOME/.ssh/config" ] || ! grep -q "Host github.com" "$HOME/.ssh/config"; then
+        echo "Konfigurerer ~/.ssh/config for GitHub..."
+        echo "Host github.com" >> "$HOME/.ssh/config"
+        echo "  IdentityFile $SSH_KEY_PATH" >> "$HOME/.ssh/config"
+        echo "  User git" >> "$HOME/.ssh/config"
+        chmod 600 "$HOME/.ssh/config"
+    fi
+    
     # Test forbindelse til GitHub (accepter host key automatisk første gang)
     echo "Tester forbindelse til GitHub..."
     ssh -T -o StrictHostKeyChecking=accept-new git@github.com || true
 else
-    # DEN OPDATEREDE ADVARSEL OM MANGLENDE NØGLER
     echo "---------------------------------------------------------------------"
     echo "ADVARSEL: SSH nøgler ikke fundet i $HOME/.ssh/"
     echo "Cloud-init har kun konfigureret adgang TIL denne maskine."
