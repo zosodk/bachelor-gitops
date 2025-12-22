@@ -2,9 +2,10 @@ terraform {
   required_providers {
     azurerm = {
   # Lås til version 3.x for at undgå v4 breaking changes
-      version = "= 3.100.0"
+      version = "3.94.0"
     }
   }
+  required_version = ">= 1.1.0"
 }
 
 provider "azurerm" {
