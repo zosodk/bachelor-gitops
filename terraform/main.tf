@@ -67,11 +67,13 @@ resource "proxmox_vm_qemu" "k8s_node" {
   # Ved at ignorere ændringer i disse attributter, sikrer vi, at Terraform ikke forsøger at ændre dem, hvilket kan føre
   lifecycle {
     ignore_changes = [
-      disk,      # Ignorer ændringer i disk-rækkefølge/slots (Løser dit problem)
-      tags,      # Ignorer ændringer i tags (Løser " " -> null problemet)
-      network,   # God ide at ignorere, hvis K3s laver virtuelle interfaces
-      qemu_os,
-      desc
+      disk,             # Ignorer ændringer i disk-rækkefølge/slots
+      network,          # Ignorer netværksændringer (hvis K3s laver interfaces)
+      tags,             # Ignorer tags
+      description,      # KORREKT NAVN (var 'desc')
+      startup_shutdown, # Ignorer drift i startup settings (-1 vs null)
+      ciuser,           # Ignorer cloud-init bruger efter første boot
+      sshkeys           # Ignorer ssh-nøgler efter første boot
     ]
   }
 }
