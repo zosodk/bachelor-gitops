@@ -18,7 +18,7 @@ provider "azurerm" {
 
 resource "azurerm_resource_group" "bachelor_rg" {
   name     = "bachelor-cloud-rg"
-  location = "East US" # (Er nød til at væglge et andet datacener, da datacentret i Danmark ikke har alle API versioner tilgængelige for Students)
+  location = "North Europe" # (Er nød til at væglge et andet datacener, da datacentret i Danmark ikke har alle API versioner tilgængelige for Students)
 }
 
 # 2. Azure Kubernetes Service (AKS)
@@ -27,6 +27,9 @@ resource "azurerm_kubernetes_cluster" "aks_prd" {
   location            = azurerm_resource_group.bachelor_rg.location
   resource_group_name = azurerm_resource_group.bachelor_rg.name
   dns_prefix          = "bachelor-prd"
+
+# VI LÅSER VERSIONEN HER FOR AT UNDGÅ API-FEJL
+  kubernetes_version  = "1.32.5"
   
   # VIGTIGT for Students: Brug "Free" tier. 
   # Det betyder, at jeg ikke betaler for "Management Plane" (API serveren).
