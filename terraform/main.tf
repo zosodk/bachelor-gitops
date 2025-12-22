@@ -61,4 +61,17 @@ resource "proxmox_vm_qemu" "k8s_node" {
   
   sshkeys   = file("~/.ssh/id_bachelor_project.pub")
   ciuser    = "gitops" 
+  # --- NY BLOK: GØR INFRASTRUKTUREN STABIL - sikrer os, at vi ikke rører eksisterende maskiners opsætning af diske og netværk.---
+  # Proxmox kan nogle gange ændre rækkefølgen af diske eller netværkskort ved opdateringer eller ændringer.
+  # Dette kan skabe problemer for K3s klynger, der er følsomme over for ændringer i hardwarekonfigurationen.
+  # Ved at ignorere ændringer i disse attributter, sikrer vi, at Terraform ikke forsøger at ændre dem, hvilket kan føre
+  lifecycle {
+    ignore_changes = [
+      disk,      # Ignorer ændringer i disk-rækkefølge/slots (Løser dit problem)
+      tags,      # Ignorer ændringer i tags (Løser " " -> null problemet)
+      network,   # God ide at ignorere, hvis K3s laver virtuelle interfaces
+      qemu_os,
+      desc
+    ]
+  }
 }
