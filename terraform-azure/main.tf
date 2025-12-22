@@ -1,3 +1,17 @@
+terraform {
+  required_providers {
+    azurerm = {
+  # Lås til version 3.x for at undgå v4 breaking changes
+      version = "= 3.100.0"
+    }
+  }
+}
+
+provider "azurerm" {
+  features {}
+  # Bruger automatisk din 'az login' session
+}
+
 # 1. Ressource Gruppe (Container til alt i Azure)
 # opsætning af adgang til Azure er gemt som screenshot i dokumentationen
 
