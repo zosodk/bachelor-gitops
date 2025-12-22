@@ -18,7 +18,7 @@ provider "azurerm" {
 
 resource "azurerm_resource_group" "bachelor_rg" {
   name     = "bachelor-cloud-rg"
-  location = "North Europe" # (Tæt på DK for lav latency)
+  location = "East US" # (Er nød til at væglge et andet datacener, da datacentret i Danmark ikke har alle API versioner tilgængelige for Students)
 }
 
 # 2. Azure Kubernetes Service (AKS)
