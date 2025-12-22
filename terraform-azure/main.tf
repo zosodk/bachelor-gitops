@@ -9,7 +9,8 @@ terraform {
 
 provider "azurerm" {
   features {}
-  # Bruger automatisk din 'az login' session
+  # Bruger automatisk din 'az login' session - tilføjet nedenfor for at undgå automatisk registrering af ressourcer som Students ikke kan
+  skip_provider_registration = true
 }
 
 # 1. Ressource Gruppe (Container til alt i Azure)
