@@ -47,28 +47,48 @@
         kubectl patch svc argocd-server -n argocd -p '{"spec": {"type": "NodePort"}}'
       environment:
         KUBECONFIG: "{{ kubeconfig_path }}"
-
-    - name: 6. Find NodePort Portnummer
+      # --- BOOTSTRAP AF APPLIKATIONER (NYT) ---
+    - name: 6. Aktiver Kubernetes Dashboard
+      ansible.builtin.shell: |
+        kubectl apply -f {{ repo_path }}/kubernetes/system-apps/dashboard.yaml
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+    - name: 7. Aktiver GitOps Pipeline (Forbind til GitHub)
+      # Dette step starter 'App of Apps' og dermed alle miljøer (DEV, TST, PRD etc.)
+      ansible.builtin.shell: |
+        kubectl apply -f {{ repo_path }}/kubernetes/argocd-apps/all-envs.yaml
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+    - name: 8. Find NodePort Portnummer
       ansible.builtin.shell: |
         kubectl get svc argocd-server -n argocd -o jsonpath='{.spec.ports[?(@.name=="https")].nodePort}'
       environment:
         KUBECONFIG: "{{ kubeconfig_path }}"
       register: argocd_port
-
-    - name: 7. Hent Initial Admin Password
+    - name: 9. Hent Initial Admin Password
       ansible.builtin.shell: |
         kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
       environment:
         KUBECONFIG: "{{ kubeconfig_path }}"
       register: argocd_password
+   - name: 10. Opret Dashboard Token (Til login)
+      ansible.builtin.shell: |
+        kubectl -n kubernetes-dashboard create token admin-user
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: dashboard_token
+      ignore_errors: yes # Hvis dashboard ikke er helt oppe endnu
 
-    - name: 8. VIS ADGANGSDATA (Gem disse!)
+    - name: 11. VIS ADGANGSDATA (Gem disse!)
       ansible.builtin.debug:
         msg: 
           - "--------------------------------------------------------"
-          - "ARGO CD ER INSTALLERET OG KLAR"
+          - "ARGO CD ER INSTALLERET OG FORBUNDET TIL GITHUB"
           - "--------------------------------------------------------"
-          - "URL: https://192.168.8.101:{{ argocd_port.stdout }}"
-          - "Brugernavn: admin"
-          - "Password: {{ argocd_password.stdout }}"
+          - "ArgoCD URL:   https://192.168.8.101:{{ argocd_port.stdout }}"
+          - "ArgoCD User:  admin"
+          - "ArgoCD Pass:  {{ argocd_password.stdout }}"
+          - "--------------------------------------------------------"
+          - "Dashboard Token:"
+          - "{{ dashboard_token.stdout }}"
           - "--------------------------------------------------------"
