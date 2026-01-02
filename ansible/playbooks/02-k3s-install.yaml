@@ -23,6 +23,16 @@
         curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="{{ k3s_master_init_args }}" INSTALL_K3S_VERSION="{{ k3s_version }}" sh -
       when: inventory_hostname == 'b-k8s-master-1'
       
+    # --- NYT TRIN: VENT PÅ AT MASTER 1 ER KLAR ---
+    # Dette sikrer, at vi ikke prøver at joine Master 2, før Master 1 lytter.
+    - name: 1.1.1 Vent på at Master 1 API er klar (Port 6443)
+      ansible.builtin.wait_for:
+        host: 192.168.8.101
+        port: 6443
+        delay: 10
+        timeout: 300
+      delegate_to: localhost # Tjekker fra b-admin mod Master 1
+      run_once: true 
     - name: 1.2 Hent K3s Node Token fra Master 1
       ansible.builtin.shell: cat /var/lib/rancher/k3s/server/node-token
       register: k3s_token_result
