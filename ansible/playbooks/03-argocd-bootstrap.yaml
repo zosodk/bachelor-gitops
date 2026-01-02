@@ -7,7 +7,8 @@
   vars:
     # JEg bruger standard config placeringen
     kubeconfig_path: "{{ ansible_env.HOME }}/.kube/config"
-
+    repo_path: "/opt/bachelor-gitops"
+    
   tasks:
     - name: 1. Opret ArgoCD Namespace
       ansible.builtin.shell: |
