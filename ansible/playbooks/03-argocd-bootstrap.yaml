@@ -8,7 +8,7 @@
     # JEg bruger standard config placeringen
     kubeconfig_path: "{{ ansible_env.HOME }}/.kube/config"
     repo_path: "/opt/bachelor-gitops"
-    
+
   tasks:
     - name: 1. Opret ArgoCD Namespace
       ansible.builtin.shell: |
@@ -49,7 +49,10 @@
       environment:
         KUBECONFIG: "{{ kubeconfig_path }}"
       # --- BOOTSTRAP AF APPLIKATIONER (NYT) ---
-    - name: 6. Aktiver Kubernetes Dashboard
+    - name: 6a. Opret Kubernetes Dashboard Namespace (Fix for manglende namespace fejl)
+      shell: kubectl create namespace kubernetes-dashboard --dry-run=client -o yaml | kubectl apply -f -
+    #
+    - name: 6b. Aktiver Kubernetes Dashboard
       ansible.builtin.shell: |
         kubectl apply -f {{ repo_path }}/kubernetes/system-apps/dashboard.yaml
       environment:
