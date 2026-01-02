@@ -71,7 +71,7 @@
       environment:
         KUBECONFIG: "{{ kubeconfig_path }}"
       register: argocd_password
-   - name: 10. Opret Dashboard Token (Til login)
+    - name: 10. Opret Dashboard Token (Til login)
       ansible.builtin.shell: |
         kubectl -n kubernetes-dashboard create token admin-user
       environment:
