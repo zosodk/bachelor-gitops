@@ -83,7 +83,7 @@ Mappen `terraform-azure/` indeholder IaC-kode til oprettelse af et Azure Kuberne
 
 > **⚠️ Begrænsning:** Da projektet anvender en **"Azure for Students"** licens, er der begrænsninger på antallet af vCPU-kerner og specifikke rettigheder i Active Directory. Derfor er den fulde automatisering af Azure-delen ikke eksekverbar i dette miljø, men koden tjener som dokumentation for den tiltænkte arkitektur beskrevet i rapporten.
 
-**⚠️ Begrænsning:** Da projektet anvender en **"Azure for Students"** licens, er **Terraform driveren** deaktiveret for denne abonnementstype. Derfor er den fulde automatisering af Azure-delen ikke eksekverbar i dette miljø, men koden tjener som dokumentation for den tiltænkte arkitektur beskrevet i rapporten.
+> **⚠️ Begrænsning:** Da projektet anvender en **"Azure for Students"** licens, er **Terraform driveren** deaktiveret for denne abonnementstype. Derfor er den fulde automatisering af Azure-delen ikke eksekverbar i dette miljø, men koden tjener som dokumentation for den tiltænkte arkitektur beskrevet i rapporten.
 
 ---
 
