@@ -26,6 +26,10 @@ Herunder ses overblikket over mappestrukturen og formålet med de enkelte kompon
 │   ├── apps/            # Applikations-manifests (Microservices)
 │   └── system-apps/     # Infrastruktur-apps (Dashboard, ArgoCD config, Ingress).
 │
+├── 📁 rapport_og_bilag/ # Indleverede dokumenter på Wiseflow
+│                        # Rapport i PDF format
+│                        # Video optagelse FJERNET pga størrelse (over 100MB).
+│
 ├── 📁 terraform/        # Infrastructure as Code (On-Premises)
 │   └── main.tf          # Provisionering af VM'er på Proxmox (Masters/Workers).
 │
